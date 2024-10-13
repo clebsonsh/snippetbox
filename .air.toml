@@ -3,9 +3,9 @@ testdata_dir = "testdata"
 tmp_dir = "tmp"
 
 [build]
-  args_bin = ["--addr=':42069'"]
+  args_bin = ["--addr=':42069' --dsn='root@/snippetbox?parseTime=true'"]
   bin = "./tmp/main"
-  cmd = "go build -o ./tmp/main ./cmd/web/."
+  cmd = "go build -o ./tmp/main ./cmd/web"
   delay = 1000
   exclude_dir = ["assets", "tmp", "vendor", "testdata"]
   exclude_file = []
