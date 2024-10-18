@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-
-	"github.com/clebsonsh/snippetbox/internal/models"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/julienschmidt/httprouter"
+
+	"github.com/clebsonsh/snippetbox/internal/models"
 )
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
@@ -69,6 +71,27 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 	app.errorLog.Print(err)
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	fieldErrors := make(map[string]string)
+
+	if strings.TrimSpace(title) == "" {
+		fieldErrors["title"] = "This filed cannot be black"
+	} else if utf8.RuneCountInString(title) > 100 {
+		fieldErrors["title"] = "This filed cannot be more than 100 characters long"
+	}
+
+	if strings.TrimSpace(content) == "" {
+		fieldErrors["content"] = "This filed cannot be black"
+	}
+
+	if expires != 1 && expires != 7 && expires != 365 {
+		fieldErrors["content"] = "This filed must equal 1, 7 or 365"
+	}
+
+	if len(fieldErrors) > 0 {
+		fmt.Fprint(w, fieldErrors)
 		return
 	}
 
