@@ -13,7 +13,6 @@ import (
 	"github.com/alexedwards/scs/mysqlstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/form/v4"
-	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/clebsonsh/snippetbox/internal/models"
 )
