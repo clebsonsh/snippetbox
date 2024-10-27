@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/julienschmidt/httprouter"
-
 	"github.com/clebsonsh/snippetbox/internal/models"
 	"github.com/clebsonsh/snippetbox/internal/validator"
 )
@@ -26,9 +24,7 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
-	params := httprouter.ParamsFromContext(r.Context())
-
-	id, err := strconv.Atoi(params.ByName("id"))
+	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil || id < 1 {
 		app.notFound(w)
 		return
