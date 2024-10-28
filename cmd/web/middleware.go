@@ -9,7 +9,7 @@ import (
 	"github.com/justinas/nosurf"
 )
 
-func secureHeaders(next http.Handler) http.Handler {
+func commonHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy",
 			"default-src 'self'; style-src 'self' fonts.googleapis.com; font-src fonts.gstatic.com")
@@ -24,9 +24,17 @@ func secureHeaders(next http.Handler) http.Handler {
 
 func (app *application) logRequest(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
+		var (
+			ip     = r.RemoteAddr
+			proto  = r.Proto
+			method = r.Method
+			uri    = r.URL.RequestURI()
+			start  = time.Now()
+		)
 		next.ServeHTTP(w, r)
-		app.infoLog.Printf("%s - %s %s %s - %s", r.RemoteAddr, r.Proto, r.Method, r.URL.RequestURI(), time.Since(start))
+		app.logger.Info(
+			"received request",
+			"ip", ip, "proto", proto, "method", method, "uri", uri, "duration", time.Since(start))
 	})
 }
 
@@ -35,7 +43,7 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 		defer func() {
 			if err := recover(); err != nil {
 				w.Header().Set("Connection", "close")
-				app.serverError(w, fmt.Errorf("%s", err))
+				app.serverError(w, r, fmt.Errorf("%s", err))
 			}
 		}()
 
@@ -66,7 +74,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 
 		exists, err := app.users.Exists(id)
 		if err != nil {
-			app.serverError(w, err)
+			app.serverError(w, r, err)
 			return
 		}
 

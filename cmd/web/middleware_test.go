@@ -21,7 +21,7 @@ func TestSecureHeaders(t *testing.T) {
 		w.Write([]byte("OK"))
 	})
 
-	secureHeaders(next).ServeHTTP(rr, r)
+	commonHeaders(next).ServeHTTP(rr, r)
 
 	rs := rr.Result()
 

@@ -10,8 +10,7 @@ import (
 func (app *application) routes() http.Handler {
 	mux := http.NewServeMux()
 
-	fileServer := http.FileServer(http.FS(ui.Files))
-	mux.Handle("GET /static/", fileServer)
+	mux.Handle("GET /static/", http.FileServerFS(ui.Files))
 
 	mux.HandleFunc("GET /ping", ping)
 
@@ -31,7 +30,7 @@ func (app *application) routes() http.Handler {
 	mux.Handle("POST /snippet/create", protected.ThenFunc(app.snippetCreatePost))
 	mux.Handle("POST /user/logout", protected.ThenFunc(app.userLogoutPost))
 
-	standard := alice.New(app.recoverPanic, app.logRequest, secureHeaders)
+	standard := alice.New(app.recoverPanic, app.logRequest, commonHeaders)
 
 	return standard.Then(mux)
 }
