@@ -71,13 +71,64 @@ func (app *application) accountView(w http.ResponseWriter, r *http.Request) {
 	app.render(w, r, http.StatusOK, "account.tmpl", data)
 }
 
-func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
+type accountPasswordUpdateFrom struct {
+	CurrentPassword         string `form:"currentPassword"`
+	NewPassword             string `form:"newPassword"`
+	NewPasswordConfirmation string `form:"newPasswordConfirmation"`
+	validator.Validator     `form:"-"`
+}
+
+func (app *application) accountPasswordUpdate(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
-	data.Form = snippetCreateForm{
-		Expires: 365,
+	data.Form = accountPasswordUpdateFrom{}
+
+	app.render(w, r, http.StatusOK, "password.tmpl", data)
+}
+
+func (app *application) accountPasswordUpdatePost(w http.ResponseWriter, r *http.Request) {
+	var form accountPasswordUpdateFrom
+
+	err := app.decodePostForm(r, &form)
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
 	}
 
-	app.render(w, r, http.StatusOK, "create.tmpl", data)
+	form.CheckField(validator.NotBlank(form.CurrentPassword), "currentPassword", "This filed cannot be blank")
+	form.CheckField(validator.NotBlank(form.NewPassword), "newPassword", "This filed cannot be blank")
+	form.CheckField(validator.NotBlank(form.NewPasswordConfirmation), "newPasswordConfirmation", "This filed cannot be blank")
+	form.CheckField(validator.MinChars(form.NewPassword, 8), "newPassword", "This field must be at least 8 characters long")
+	form.CheckField(form.NewPasswordConfirmation == form.NewPassword, "newPasswordConfirmation", "Password do not match")
+
+	if !form.Valid() {
+		data := app.newTemplateData(r)
+		data.Form = form
+
+		app.render(w, r, http.StatusUnprocessableEntity, "password.tmpl", data)
+		return
+	}
+
+	userID := app.sessionManager.GetInt(r.Context(), "authenticatedUserID")
+
+	err = app.users.PasswordUpdate(userID, form.CurrentPassword, form.NewPassword)
+	if err != nil {
+		if errors.Is(err, models.ErrInvalidCredentials) {
+			form.AddFieldError("currentPassword", "Current password is incorrect")
+
+			data := app.newTemplateData(r)
+			data.Form = form
+
+			app.render(w, r, http.StatusUnprocessableEntity, "password.tmpl", data)
+		} else {
+			app.serverError(w, r, err)
+		}
+
+		return
+	}
+
+	app.sessionManager.Put(r.Context(), "flash", "Password has been successfully updated!")
+
+	http.Redirect(w, r, "/account/view", http.StatusSeeOther)
 }
 
 type snippetCreateForm struct {
@@ -85,6 +136,15 @@ type snippetCreateForm struct {
 	Content             string `form:"content"`
 	validator.Validator `form:"-"`
 	Expires             int `form:"expires"`
+}
+
+func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
+	data := app.newTemplateData(r)
+	data.Form = snippetCreateForm{
+		Expires: 365,
+	}
+
+	app.render(w, r, http.StatusOK, "create.tmpl", data)
 }
 
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
@@ -96,9 +156,9 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	form.CheckField(validator.NotBlank(form.Title), "title", "This filed cannot be black")
+	form.CheckField(validator.NotBlank(form.Title), "title", "This filed cannot be blank")
 	form.CheckField(validator.MaxChars(form.Title, 100), "title", "This filed cannot be more than 100 characters long")
-	form.CheckField(validator.NotBlank(form.Content), "content", "This filed cannot be black")
+	form.CheckField(validator.NotBlank(form.Content), "content", "This filed cannot be blank")
 	form.CheckField(validator.PermittedValue(form.Expires, 1, 7, 365), "expires", "This filed must equal 1, 7 or 365")
 
 	if !form.Valid() {
