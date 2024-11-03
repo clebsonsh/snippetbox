@@ -6,7 +6,7 @@ import (
 	"github.com/clebsonsh/snippetbox/internal/models"
 )
 
-var mockSnippet = &models.Snippet{
+var mockSnippet = models.Snippet{
 	ID:      1,
 	Title:   "An old silient pond",
 	Content: "An old silient pond...",
@@ -20,15 +20,15 @@ func (m *SnippetModel) Insert(title string, content string, expires int) (int, e
 	return 2, nil
 }
 
-func (m *SnippetModel) Get(id int) (*models.Snippet, error) {
+func (m *SnippetModel) Get(id int) (models.Snippet, error) {
 	switch id {
 	case 1:
 		return mockSnippet, nil
 	default:
-		return nil, models.ErrNoRecord
+		return models.Snippet{}, models.ErrNoRecord
 	}
 }
 
-func (m *SnippetModel) Latest() ([]*models.Snippet, error) {
-	return []*models.Snippet{mockSnippet}, nil
+func (m *SnippetModel) Latest() ([]models.Snippet, error) {
+	return []models.Snippet{mockSnippet}, nil
 }

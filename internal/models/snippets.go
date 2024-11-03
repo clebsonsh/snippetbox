@@ -8,8 +8,8 @@ import (
 
 type SnippetModelInterface interface {
 	Insert(title string, content string, expires int) (int, error)
-	Get(id int) (*Snippet, error)
-	Latest() ([]*Snippet, error)
+	Get(id int) (Snippet, error)
+	Latest() ([]Snippet, error)
 }
 
 type Snippet struct {
@@ -41,36 +41,34 @@ func (m *SnippetModel) Insert(title string, content string, expires int) (int, e
 	return int(id), nil
 }
 
-func (m *SnippetModel) Get(id int) (*Snippet, error) {
+func (m *SnippetModel) Get(id int) (Snippet, error) {
+	var snippet Snippet
+
 	stmt := `SELECT id, title, content, created, expires
     FROM snippets
     WHERE 
       expires > UTC_TIMESTAMP()
       AND id = ?`
 
-	row := m.DB.QueryRow(stmt, id)
-
-	s := &Snippet{}
-
-	err := row.Scan(
-		&s.ID,
-		&s.Title,
-		&s.Content,
-		&s.Created,
-		&s.Expires,
+	err := m.DB.QueryRow(stmt, id).Scan(
+		&snippet.ID,
+		&snippet.Title,
+		&snippet.Content,
+		&snippet.Created,
+		&snippet.Expires,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNoRecord
+			return Snippet{}, ErrNoRecord
 		} else {
-			return nil, err
+			return Snippet{}, err
 		}
 	}
 
-	return s, nil
+	return snippet, nil
 }
 
-func (m *SnippetModel) Latest() ([]*Snippet, error) {
+func (m *SnippetModel) Latest() ([]Snippet, error) {
 	stmt := `SELECT id, title, content, created, expires
     FROM snippets
     WHERE expires > UTC_TIMESTAMP()
@@ -83,10 +81,10 @@ func (m *SnippetModel) Latest() ([]*Snippet, error) {
 
 	defer rows.Close()
 
-	snippets := []*Snippet{}
+	snippets := []Snippet{}
 
 	for rows.Next() {
-		s := &Snippet{}
+		s := Snippet{}
 
 		err = rows.Scan(
 			&s.ID,
